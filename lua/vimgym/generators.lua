@@ -110,21 +110,71 @@ function KINDS.textobj()
     target = { pre .. " " .. p[1] .. p[2] .. " end" }, par = 3, _open = p[1] }
 end
 
+-- Macro drills: the same edit on every line. `line` returns a start/target pair,
+-- `body` is the reference recording (it must end on the next line, ready to
+-- replay). Par = qa + body + q + {n-1}@a. Keys are counted one per character.
+local MACROS = {
+  { name = "quote", title = "Quote and comma", hint = 'Wrap each line as "word",',
+    line = function() local w = pick(WORDS) return w, '"' .. w .. '",' end,
+    body = 'I"\27A",\27j' },
+  { name = "semicolon", title = "Semicolons", hint = "Add ; to the end of every line",
+    line = function()
+      local s = "local " .. pick(WORDS) .. " = " .. math.random(1, 99)
+      return s, s .. ";"
+    end,
+    body = "A;\27j" },
+  { name = "bullet", title = "Bullet list", hint = "Turn every line into a '- ' bullet",
+    line = function() local s = table.concat(sentence(2), " ") return s, "- " .. s end,
+    body = "I- \27j" },
+  { name = "upper", title = "Uppercase", hint = "Uppercase the first word of every line",
+    line = function() local w = sentence(2) return table.concat(w, " "), w[1]:upper() .. " " .. w[2] end,
+    body = "gUiwj" },
+  { name = "label", title = "Strip labels", hint = "Delete the 'key: ' label from every line",
+    line = function() local k, v = pick(WORDS), pick(WORDS) return k .. ": " .. v, v end,
+    body = "dWj" },
+  { name = "call", title = "Wrap in a call", hint = "Wrap every line in print(...)",
+    line = function() local w = pick(WORDS) return w, "print(" .. w .. ")" end,
+    body = "Iprint(\27A)\27j" },
+  { name = "comment", title = "Strip comments", hint = "Remove the trailing -- comment from every line",
+    line = function()
+      local s = pick(WORDS) .. " = " .. math.random(1, 99)
+      return s .. " -- " .. pick(WORDS), s
+    end,
+    body = "0f-hDj" },
+}
+M.MACROS = MACROS
+
+local function count_prefix(n, motion)
+  if n <= 0 then return "" elseif n == 1 then return motion else return n .. motion end
+end
+
 function KINDS.macro()
+  local v = math.random(#MACROS + 1)
+  if v > #MACROS then
+    -- Numbered list: copy the line down and increment, building it up from one line
+    local n = math.random(5, 9)
+    local word = pick(WORDS)
+    local target = {}
+    for i = 1, n do target[i] = word .. " " .. i end
+    return { title = "Macro: Numbered list", variant = "increment",
+      hint = "Build the list from line 1 (yyp, <C-a>), record once, replay with a count",
+      start = { word .. " 1" }, cursor = { 1, 0 }, target = target,
+      par = 7 + cost(n - 2, 2), _solution = "qayyp\1q" .. count_prefix(n - 2, "@a") }
+  end
+  local m = MACROS[v]
   local n = math.random(5, 9)
   local start, target = {}, {}
-  for i = 1, n do
-    local w = pick(WORDS)
-    start[i], target[i] = w, '"' .. w .. '",'
-  end
-  return { title = "Macro", hint = 'Wrap each line as "word", (record on line 1, replay with a count)',
-    start = start, cursor = { 1, 0 }, target = target, par = 11 + cost(n - 1, 2), _n = n }
+  for i = 1, n do start[i], target[i] = m.line() end
+  return { title = "Macro: " .. m.title, variant = m.name,
+    hint = m.hint .. " (record on line 1, replay with a count)",
+    start = start, cursor = { 1, 0 }, target = target,
+    par = 3 + #m.body + cost(n - 1, 2), _solution = "qa" .. m.body .. "q" .. count_prefix(n - 1, "@a") }
 end
 
 function M.drill(mod)
   local kind = pick(mod.drills)
   local ex = KINDS[kind]()
-  ex.id = "gen:" .. kind
+  ex.id = "gen:" .. kind .. (ex.variant and (":" .. ex.variant) or "")
   ex.kind = kind
   return ex
 end

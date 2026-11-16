@@ -1,9 +1,11 @@
 local M = {}
 
 M.config = {
-  drills_per_practice = 10, -- generated drills per :VimGym practice
+  drills_per_practice = 10, -- drills per practice round (practice runs until you quit)
   par_slack = 0,            -- extra keystrokes allowed while still earning three stars
   pass_delay = 600,         -- ms to pause after a pass before the next exercise
+  number = true,            -- line numbers in the drill window
+  relativenumber = true,    -- relative line numbers in the drill window
   data_path = nil,          -- progress file; nil = stdpath("data")/vimgym.json
 }
 
@@ -25,11 +27,9 @@ function M.command(args)
   local session = require("vimgym.session")
 
   if sub == "start" then
-    local mod = current_module()
-    if not mod then
-      return vim.notify("Vim Gym: all modules complete. Try :VimGym practice <module>")
+    if not session.run_lessons() then
+      vim.notify("Vim Gym: all modules complete. Try :VimGym practice <module>")
     end
-    session.run_lessons(mod)
   elseif sub == "practice" then
     local mod = args[2] and curriculum.get(args[2]) or current_module()
     if not mod then return vim.notify("Vim Gym: unknown module", vim.log.levels.WARN) end

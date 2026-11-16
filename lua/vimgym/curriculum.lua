@@ -63,6 +63,9 @@ M.modules = {
       { id = "macros:1", title = "Record and replay", hint = 'qa I"<Esc>A",<Esc>j q, then 3@a',
         start = { "one", "two", "three", "four" }, cursor = { 1, 0 },
         target = { '"one",', '"two",', '"three",', '"four",' }, par = 14, solution = 'qaI"\27A",\27jq3@a' },
+      { id = "macros:2", title = "Build a numbered list", hint = "qa yyp <C-a> q, then 3@a",
+        start = { "step 1" }, cursor = { 1, 0 },
+        target = { "step 1", "step 2", "step 3", "step 4", "step 5" }, par = 10, solution = "qayyp\1q3@a" },
     },
   },
 }

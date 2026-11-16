@@ -29,9 +29,11 @@ With every option set:
   "<your-github-user>/vim-gym",
   cmd = "VimGym",
   opts = {
-    drills_per_practice = 10, -- generated drills per :VimGym practice
+    drills_per_practice = 10, -- drills per practice round
     par_slack = 0,            -- extra keystrokes allowed while still earning three stars
     pass_delay = 600,         -- ms pause after a pass before the next exercise
+    number = true,            -- line numbers in the drill window
+    relativenumber = true,    -- relative line numbers in the drill window
     data_path = nil,          -- progress file; nil = stdpath("data") .. "/vimgym.json"
   },
   keys = {
@@ -54,9 +56,11 @@ To develop from a local clone instead:
 
 | Option | Default | What it does |
 | --- | --- | --- |
-| `drills_per_practice` | `10` | Number of generated drills in one `:VimGym practice` run |
+| `drills_per_practice` | `10` | Drills per practice round. Practice keeps going in rounds until you quit, with a summary after each |
 | `par_slack` | `0` | Keystrokes over par that still earn three stars |
 | `pass_delay` | `600` | Milliseconds to show the result before the next exercise |
+| `number` | `true` | Line numbers in the drill window |
+| `relativenumber` | `true` | Relative line numbers in the drill window. With `number` also on, the current line shows its absolute number |
 | `data_path` | `nil` | Where progress is stored. `nil` uses `stdpath("data")/vimgym.json` |
 
 Scoring: at or under par plus slack earns three stars, up to twice par earns two, anything more earns one.
@@ -65,19 +69,23 @@ Scoring: at or under par plus slack earns three stars, up to twice par earns two
 
 | Command | What it does |
 | --- | --- |
-| `:VimGym` / `:VimGym start` | Run the lessons for your current module |
-| `:VimGym practice [module]` | Generated drills for a module (default: current). Tab-completes module ids |
+| `:VimGym` / `:VimGym start` | Lessons from your current module onwards, rolling straight into the next module as each one is completed |
+| `:VimGym practice [module]` | Endless generated drills for a module (default: current), in rounds. Tab-completes module ids |
 | `:VimGym menu` | Pick a module to practise. `[x]` done, `[ ]` unlocked, `[-]` locked |
 | `:VimGym skip` | Mark the current module complete and move on |
-| `:VimGym placement` | One drill per module, in order; stops at the first one over twice par. Passed modules unlock |
+| `:VimGym placement` | One drill per module, in order; stops at the first one over twice par. Passed modules unlock, then lessons carry on from the first module you didn't place out of |
 | `:VimGym reset` | Clear all progress and best scores |
-| `:VimGym quit` | End the session and close its tab |
+| `:VimGym quit` | End the session and close its tab. `:q` in either window does the same |
 
 Module ids: `basics`, `words`, `line`, `operators`, `change`, `textobjects`, `macros`.
 
 ## How a session works
 
-A new tab opens. Left: the drill buffer, where you type. Right: the title, hint, par and target text; for motion drills the goal character is highlighted. The check runs automatically whenever you're back in normal mode, so there's nothing to submit. Every key typed in the drill buffer counts, including `:` commands and `<Esc>`.
+A new tab opens. Left: the drill buffer, where you type. Right: the title, hint, par and target text; for motion drills the goal character is highlighted. The check runs automatically whenever you're back in normal mode, so there's nothing to submit. Every key typed in the drill buffer counts, including `:` commands and `<Esc>`. If you're recording a macro, the check waits until you stop recording.
+
+Progress is saved after every exercise, so quitting part-way loses nothing.
+
+Macro practice draws from eight drill types: quote-and-comma, semicolons, bullets, uppercasing the first word, stripping `key:` labels, wrapping in `print(...)`, stripping trailing comments, and building a numbered list with `yyp` and `<C-a>`.
 
 ## Adding lessons
 
@@ -107,7 +115,7 @@ From the repo root:
 nvim --headless -u NONE --cmd "set rtp+=." -l tests/run.lua
 ```
 
-This types the intended solution into every lesson and 40 random drills per generator, and checks each passes at exactly par. Set `VIMGYM_DRILLS=200` for a longer run. It exits non-zero on failure, so it drops straight into CI.
+This types the intended solution into every lesson, 40 random drills per generator and every macro variant, and checks each passes at exactly par. It also checks the session flow: lessons rolling through every module, practice rounds, placement carrying on into lessons, and `:q` ending a session without errors. Set `VIMGYM_DRILLS=200` for a longer run. It exits non-zero on failure, so it drops straight into CI.
 
 ## Known limitations
 
